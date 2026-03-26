@@ -3,14 +3,21 @@
 #include <string>
 #include <vector>
 
-// Seconds without an advertisement before a contact is considered lost.
+// Seconds without an in-range advertisement before a contact is considered lost.
 static const NSTimeInterval kContactTimeoutSeconds = 5.0;
+
+// RSSI threshold for "in contact". Readings at or below this value are treated
+// as out-of-range (~>2 m) and will NOT refresh lastSeen, causing the timeout
+// timer to fire naturally after kContactTimeoutSeconds.
+static const int kContactRangeMinRssi = -85;
 
 // Keys used in the per-peer tracking dictionary (private, not exported).
 static NSString* const kKeyFirstSeen    = @"firstSeen";
 static NSString* const kKeyLastSeen     = @"lastSeen";
 static NSString* const kKeyMbti         = @"mbti";
 static NSString* const kKeyRssiSamples  = @"rssiSamples";
+// Highest (closest) RSSI observed during the session — used to derive closestDistance.
+static NSString* const kKeyMaxRssi      = @"maxRssi";
 
 @interface SWBleManager () <CBCentralManagerDelegate, CBPeripheralManagerDelegate>
 
@@ -170,6 +177,11 @@ static NSString* const kKeyRssiSamples  = @"rssiSamples";
     int64_t startMs = (int64_t)([firstSeen timeIntervalSince1970] * 1000.0);
     int64_t endMs   = (int64_t)([endTime   timeIntervalSince1970] * 1000.0);
 
+    // Closest distance = highest RSSI seen during the session.
+    NSNumber* maxRssiNum = contact[kKeyMaxRssi];
+    int closestRssi = maxRssiNum ? maxRssiNum.intValue : avgRssi;
+    NSString* closestDistStr = @(sw_distance_name(sw_rssi_to_distance(closestRssi)));
+
     [self _fireContactEvent:@{
         @"_type":           @"peer_lost",
         @"name":            name,
@@ -178,6 +190,8 @@ static NSString* const kKeyRssiSamples  = @"rssiSamples";
         @"avgRssi":         @(avgRssi),
         @"startTimeMs":     @(startMs),
         @"endTimeMs":       @(endMs),
+        @"closestRssi":     @(closestRssi),
+        @"closestDistance": closestDistStr,
     }];
 }
 
@@ -214,6 +228,10 @@ static NSString* const kKeyRssiSamples  = @"rssiSamples";
 
     int rssiInt = RSSI.intValue;
 
+    // Ignore readings beyond the contact range (~>2 m).
+    // lastSeen will not be refreshed, so the timeout timer will fire naturally.
+    if (rssiInt <= kContactRangeMinRssi) return;
+
     SWDistanceCategory distCat = sw_rssi_to_distance(rssiInt);
     NSString* distStr = @(sw_distance_name(distCat));
 
@@ -229,6 +247,7 @@ static NSString* const kKeyRssiSamples  = @"rssiSamples";
             entry[kKeyLastSeen]    = now;
             entry[kKeyMbti]        = mbtiStr;
             entry[kKeyRssiSamples] = [NSMutableArray arrayWithObject:@(rssiInt)];
+            entry[kKeyMaxRssi]     = @(rssiInt);
             self.activeContacts[nameStr] = entry;
 
             [self _fireContactEvent:@{
@@ -242,6 +261,11 @@ static NSString* const kKeyRssiSamples  = @"rssiSamples";
             // Existing contact — peer_update
             existing[kKeyLastSeen] = now;
             [existing[kKeyRssiSamples] addObject:@(rssiInt)];
+            // Keep track of the closest (highest RSSI) reading seen this session.
+            NSNumber* currentMax = existing[kKeyMaxRssi];
+            if (!currentMax || rssiInt > currentMax.intValue) {
+                existing[kKeyMaxRssi] = @(rssiInt);
+            }
 
             NSDate* firstSeen = existing[kKeyFirstSeen];
             int durationSec   = (int)MAX(0, round([now timeIntervalSinceDate:firstSeen]));

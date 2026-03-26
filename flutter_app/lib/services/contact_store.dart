@@ -12,6 +12,8 @@ class ContactRecord {
   final DateTime endTime;
   final int durationSeconds;
   final int avgRssi;
+  /// Highest RSSI (= closest approach) during the session.
+  final int closestRssi;
 
   const ContactRecord({
     required this.name,
@@ -20,6 +22,7 @@ class ContactRecord {
     required this.endTime,
     required this.durationSeconds,
     required this.avgRssi,
+    required this.closestRssi,
   });
 
   Map<String, dynamic> toJson() => {
@@ -29,6 +32,7 @@ class ContactRecord {
         'endTimeMs': endTime.millisecondsSinceEpoch,
         'durationSeconds': durationSeconds,
         'avgRssi': avgRssi,
+        'closestRssi': closestRssi,
       };
 
   factory ContactRecord.fromJson(Map<String, dynamic> j) => ContactRecord(
@@ -40,6 +44,9 @@ class ContactRecord {
                              (j['endTimeMs'] as num?)?.toInt() ?? 0),
         durationSeconds: (j['durationSeconds'] as num?)?.toInt() ?? 0,
         avgRssi:         (j['avgRssi'] as num?)?.toInt() ?? 0,
+        // closestRssi defaults to avgRssi for records saved before this field existed.
+        closestRssi:     (j['closestRssi'] as num?)?.toInt() ??
+                         (j['avgRssi'] as num?)?.toInt() ?? 0,
       );
 }
 

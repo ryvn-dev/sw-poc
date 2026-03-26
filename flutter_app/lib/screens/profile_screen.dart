@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sw_ble/sw_ble.dart';
 import 'nearby_screen.dart';
+import 'history_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -44,7 +45,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Set Your Profile')),
+      appBar: AppBar(
+        title: const Text('Set Your Profile'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: '接觸紀錄',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HistoryScreen()),
+            ),
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Form(

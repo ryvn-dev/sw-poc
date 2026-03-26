@@ -60,10 +60,20 @@ const char* sw_mbti_name(uint8_t index) {
     return kMbtiTypes[index];
 }
 
+// RSSI → distance category, calibrated for a 0–2 m contact range.
+// Beyond ~2 m (RSSI ≤ -85) the peer is treated as out-of-range in
+// SWBleManager and will time out naturally; sw_rssi_to_distance is only
+// called for in-range readings.
+//
+// Approximate distances (environment-dependent):
+//   very_close: < 0.5 m  (> -60 dBm)
+//   near:     0.5–1.0 m  (-60 to -70 dBm)
+//   medium:   1.0–1.5 m  (-70 to -78 dBm)
+//   far:      1.5–2.0 m  (-78 to -85 dBm)
 SWDistanceCategory sw_rssi_to_distance(int rssi) {
     if (rssi > -60) return SWDistanceCategory::very_close;
-    if (rssi > -75) return SWDistanceCategory::near;
-    if (rssi > -85) return SWDistanceCategory::medium;
+    if (rssi > -70) return SWDistanceCategory::near;
+    if (rssi > -78) return SWDistanceCategory::medium;
     return SWDistanceCategory::far;
 }
 

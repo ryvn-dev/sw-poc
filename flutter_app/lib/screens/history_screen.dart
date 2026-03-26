@@ -21,15 +21,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('清除紀錄'),
-        content: const Text('確定刪除所有接觸紀錄？'),
+        title: const Text('Clear History'),
+        content: const Text('Delete all contact records?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消')),
+              child: const Text('Cancel')),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('清除')),
+              child: const Text('Clear')),
         ],
       ),
     );
@@ -43,11 +43,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('接觸紀錄'),
+        title: const Text('Contact History'),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            tooltip: '清除',
+            tooltip: 'Clear',
             onPressed: _clear,
           ),
         ],
@@ -60,7 +60,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           }
           final records = snap.data ?? [];
           if (records.isEmpty) {
-            return const Center(child: Text('尚無接觸紀錄'));
+            return const Center(child: Text('No contact history yet'));
           }
           return ListView.separated(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -70,6 +70,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               final r = records[i];
               final endLabel = _timeLabel(r.endTime);
               final durLabel = _fmtDuration(r.durationSeconds);
+              final closestLabel = _distanceLabel(r.closestRssi);
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor:
@@ -83,7 +84,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                 ),
                 title: Text(r.name),
-                subtitle: Text('${r.mbti}  ·  ${r.avgRssi} dBm'),
+                subtitle: Text(
+                  '${r.mbti}  ·  closest: $closestLabel  ·  avg ${r.avgRssi} dBm',
+                ),
                 trailing: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -111,11 +114,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _timeLabel(DateTime dt) {
     final now = DateTime.now();
     if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
-      return '今天 ${dt.hour.toString().padLeft(2, '0')}:'
+      return 'Today ${dt.hour.toString().padLeft(2, '0')}:'
           '${dt.minute.toString().padLeft(2, '0')}';
     }
     return '${dt.month}/${dt.day} '
         '${dt.hour.toString().padLeft(2, '0')}:'
         '${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// Human-readable label for the closest distance derived from RSSI.
+  String _distanceLabel(int rssi) {
+    if (rssi > -60) return 'Super Close';
+    if (rssi > -70) return 'Near';
+    if (rssi > -78) return 'Medium';
+    return 'Far';
   }
 }

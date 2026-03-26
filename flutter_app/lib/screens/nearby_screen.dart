@@ -61,12 +61,13 @@ class _NearbyScreenState extends State<NearbyScreen> {
             endTime:         DateTime.fromMillisecondsSinceEpoch(event.endTimeMs),
             durationSeconds: event.durationSeconds,
             avgRssi:         event.avgRssi,
+            closestRssi:     event.closestRssi,
           ));
           setState(() {});
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(
-                '${event.name} 離開了（${_fmtDuration(event.durationSeconds)}）',
+                '${event.name} left (${_fmtDuration(event.durationSeconds)})',
               ),
               duration: const Duration(seconds: 3),
             ));
@@ -83,9 +84,13 @@ class _NearbyScreenState extends State<NearbyScreen> {
   }
 
   Future<void> _stop() async {
-    await _bleSub?.cancel();
     _uiTimer?.cancel();
+    // stopBle 會呼叫 _flushActiveContactsAsLost，對所有進行中的接觸發出 peer_lost 事件，
+    // 讓 _onEvent 把紀錄存入 ContactStore。
+    // 必須先 stopBle，再取消訂閱，否則事件會被丟棄，導致主動離開的人沒有歷史紀錄。
     await SwBle.stopBle();
+    await Future.delayed(Duration.zero); // 讓 peer_lost 事件跑完一個 microtask cycle
+    await _bleSub?.cancel();
     if (mounted) Navigator.pop(context);
   }
 
@@ -199,10 +204,10 @@ class _DistanceBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, label, color) = switch (distance) {
-      DistanceCategory.veryClose => (Icons.sensors,        '非常近', Colors.green),
-      DistanceCategory.near      => (Icons.wifi,           '近',    Colors.lightGreen),
-      DistanceCategory.medium    => (Icons.wifi_2_bar,     '中',    Colors.orange),
-      DistanceCategory.far       => (Icons.wifi_1_bar,     '遠',    Colors.red),
+      DistanceCategory.veryClose => (Icons.sensors,        'Super Close', Colors.green),
+      DistanceCategory.near      => (Icons.wifi,           'Near',        Colors.lightGreen),
+      DistanceCategory.medium    => (Icons.wifi_2_bar,     'Medium',      Colors.orange),
+      DistanceCategory.far       => (Icons.wifi_1_bar,     'Far',         Colors.red),
     };
     return Row(
       mainAxisSize: MainAxisSize.min,

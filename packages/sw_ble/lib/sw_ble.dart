@@ -56,6 +56,12 @@ class ContactEvent {
   /// Average RSSI over the session (only meaningful for [lost]).
   final int avgRssi;
 
+  /// Highest RSSI (= closest approach) during the session (only for [lost]).
+  final int closestRssi;
+
+  /// Distance category at the closest approach (only for [lost]).
+  final DistanceCategory closestDistance;
+
   /// Session start/end as Unix-epoch milliseconds (only meaningful for [lost]).
   final int startTimeMs;
   final int endTimeMs;
@@ -68,6 +74,8 @@ class ContactEvent {
     this.distance = DistanceCategory.far,
     this.durationSeconds = 0,
     this.avgRssi = 0,
+    this.closestRssi = 0,
+    this.closestDistance = DistanceCategory.far,
     this.startTimeMs = 0,
     this.endTimeMs = 0,
   });
@@ -129,6 +137,8 @@ class SwBle {
             distance:        _parseDistance(m['distance'] as String?),
             durationSeconds: (m['durationSeconds'] as num?)?.toInt() ?? 0,
             avgRssi:         (m['avgRssi']         as num?)?.toInt() ?? 0,
+            closestRssi:     (m['closestRssi']     as num?)?.toInt() ?? 0,
+            closestDistance: _parseDistance(m['closestDistance'] as String?),
             startTimeMs:     (m['startTimeMs']     as num?)?.toInt() ?? 0,
             endTimeMs:       (m['endTimeMs']       as num?)?.toInt() ?? 0,
           );
